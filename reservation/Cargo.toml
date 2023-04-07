@@ -11,3 +11,7 @@ async-trait = "0.1.68"
 chrono = { version = "0.4.24", features = ["serde"] }
 sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "uuid"] }
 thiserror = "1.0.40"
+
+[dev-dependencies]
+sqlx-database-tester = { version = "0.4.2", features = ["runtime-tokio"] }
+tokio = { version = "1.27.0", features = ["full"] }
