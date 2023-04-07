@@ -6,6 +6,7 @@ fn main() {
     tonic_build::configure()
         // for use the optional protocol https://github.com/hyperium/tonic/issues/627
         .protoc_arg("--experimental_allow_proto3_optional")
+        .type_attribute("reservation.ReservationStatus", "#[derive(sqlx::Type)]")
         .out_dir("src/pb")
         .compile(&["protos/reservation.proto"], &["protos"])
         .unwrap();
