@@ -15,7 +15,7 @@ fn main() {
         fs::remove_file(google_rs).unwrap();
     }
 
-    Command::new("cargo").args(&["fmt"]).output().unwrap();
+    Command::new("cargo").args(["fmt"]).output().unwrap();
 
     println!("cargo::rerun-if-changed=protos/reservation.proto");
 }

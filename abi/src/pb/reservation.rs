@@ -4,8 +4,8 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Reservation {
     /// unique id for the reservation, if put into ReservationRequest, id should be empty
-    #[prost(int64, tag = "1")]
-    pub id: i64,
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
     /// user id for the reservation
     #[prost(string, tag = "2")]
     pub user_id: ::prost::alloc::string::String,
@@ -43,8 +43,6 @@ pub struct ReserveResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateRequest {
-    #[prost(int64, tag = "1")]
-    pub id: i64,
     #[prost(string, tag = "2")]
     pub note: ::prost::alloc::string::String,
 }
@@ -59,8 +57,8 @@ pub struct UpdateResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConfirmRequest {
-    #[prost(int64, tag = "1")]
-    pub id: i64,
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
 }
 /// Confirmed reservation will be returned in ConfirmResponse
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -73,8 +71,8 @@ pub struct ConfirmResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CancelRequest {
-    #[prost(int64, tag = "1")]
-    pub id: i64,
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
 }
 /// Canceled reservation will be returned in CancelResponse
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -87,8 +85,8 @@ pub struct CancelResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetRequest {
-    #[prost(int64, tag = "1")]
-    pub id: i64,
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
 }
 /// Reservation will be returned in GetResponse
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -97,10 +95,10 @@ pub struct GetResponse {
     #[prost(message, optional, tag = "1")]
     pub reservation: ::core::option::Option<Reservation>,
 }
-/// query reservations with user id, resource id, start time, end time, and status
+/// To query reservations, send a QueryRequest
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ReservationQuery {
+pub struct QueryRequest {
     /// resource id for the reservation query. If empty, query all resources
     #[prost(string, tag = "1")]
     pub resource_id: ::prost::alloc::string::String,
@@ -116,64 +114,6 @@ pub struct ReservationQuery {
     /// end time for the reservation query, if 0, use Infinity for end time
     #[prost(message, optional, tag = "5")]
     pub end: ::core::option::Option<::prost_types::Timestamp>,
-    /// sort direction
-    #[prost(bool, tag = "6")]
-    pub desc: bool,
-}
-/// To query reservations, send a QueryRequest
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryRequest {
-    #[prost(message, optional, tag = "1")]
-    pub query: ::core::option::Option<ReservationQuery>,
-}
-/// query reservations, order by reservation id
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ReservationFilter {
-    /// resource id for the reservation query. If empty, query all resources
-    #[prost(string, tag = "1")]
-    pub resource_id: ::prost::alloc::string::String,
-    /// user id for the reservation query. If empty, query all users
-    #[prost(string, tag = "2")]
-    pub user_id: ::prost::alloc::string::String,
-    /// use status to filter result. If UNKNOWN, return all reservations
-    #[prost(enumeration = "ReservationStatus", tag = "3")]
-    pub status: i32,
-    #[prost(int64, optional, tag = "4")]
-    pub cursor: ::core::option::Option<i64>,
-    /// page size for the query
-    #[prost(int64, tag = "5")]
-    pub page_size: i64,
-    /// sort direction
-    #[prost(bool, tag = "6")]
-    pub desc: bool,
-}
-/// To query reservations, send a QueryRequest
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FilterRequest {
-    #[prost(message, optional, tag = "1")]
-    pub filter: ::core::option::Option<ReservationFilter>,
-}
-/// filter pager info
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FilterPager {
-    #[prost(int64, optional, tag = "1")]
-    pub prev: ::core::option::Option<i64>,
-    #[prost(int64, optional, tag = "2")]
-    pub next: ::core::option::Option<i64>,
-    #[prost(int64, optional, tag = "3")]
-    pub total: ::core::option::Option<i64>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FilterResponse {
-    #[prost(message, repeated, tag = "1")]
-    pub reservations: ::prost::alloc::vec::Vec<Reservation>,
-    #[prost(message, optional, tag = "2")]
-    pub pager: ::core::option::Option<FilterPager>,
 }
 /// Client can listen to reservation updates by sending a ListenRequest
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -457,25 +397,6 @@ pub mod reservation_service_client {
                 .insert(GrpcMethod::new("reservation.ReservationService", "query"));
             self.inner.server_streaming(req, path, codec).await
         }
-        /// filter reservations, order by reservation id
-        pub async fn filter(
-            &mut self,
-            request: impl tonic::IntoRequest<super::FilterRequest>,
-        ) -> std::result::Result<tonic::Response<super::FilterResponse>, tonic::Status> {
-            self.inner.ready().await.map_err(|e| {
-                tonic::Status::new(
-                    tonic::Code::Unknown,
-                    format!("Service was not ready: {}", e.into()),
-                )
-            })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path =
-                http::uri::PathAndQuery::from_static("/reservation.ReservationService/filter");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "filter"));
-            self.inner.unary(req, path, codec).await
-        }
         /// another system could monitor newly added/confirmed/cancelled reservations
         pub async fn listen(
             &mut self,
@@ -541,11 +462,6 @@ pub mod reservation_service_server {
             &self,
             request: tonic::Request<super::QueryRequest>,
         ) -> std::result::Result<tonic::Response<Self::queryStream>, tonic::Status>;
-        /// filter reservations, order by reservation id
-        async fn filter(
-            &self,
-            request: tonic::Request<super::FilterRequest>,
-        ) -> std::result::Result<tonic::Response<super::FilterResponse>, tonic::Status>;
         /// Server streaming response type for the listen method.
         type listenStream: futures_core::Stream<Item = std::result::Result<super::Reservation, tonic::Status>>
             + Send
@@ -861,44 +777,6 @@ pub mod reservation_service_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.server_streaming(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/reservation.ReservationService/filter" => {
-                    #[allow(non_camel_case_types)]
-                    struct filterSvc<T: ReservationService>(pub Arc<T>);
-                    impl<T: ReservationService> tonic::server::UnaryService<super::FilterRequest> for filterSvc<T> {
-                        type Response = super::FilterResponse;
-                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::FilterRequest>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move { (*inner).filter(request).await };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = filterSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
