@@ -4,19 +4,19 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 use std::{collections::HashMap, convert::Infallible, str::FromStr};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReservationConflictInfo {
     Parsed(ReservationConflict),
     Unparsed(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReservationConflict {
     pub new: ReservationWindow,
     pub old: ReservationWindow,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReservationWindow {
     pub rid: String,
     pub start: DateTime<Utc>,

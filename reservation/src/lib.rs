@@ -1,6 +1,6 @@
 mod manager;
 
-use abi::{Error, Reservation};
+use abi::Error;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -23,7 +23,7 @@ pub trait Rsvp {
     async fn update_note(&self, id: ReservationId, note: String)
         -> Result<abi::Reservation, Error>;
     /// delete reservation
-    async fn delete(&self, id: ReservationId) -> Result<(), Reservation>;
+    async fn delete(&self, id: ReservationId) -> Result<(), Error>;
     /// get reservation by id
     async fn get(&self, id: ReservationId) -> Result<abi::Reservation, Error>;
     /// query reservations
