@@ -1,8 +1,9 @@
+
 -- resevation change queue
 CREATE TABLE rsvp.reservation_changes (
-                                          id SERIAL NOT NULL,
-                                          reservation_id uuid NOT NULL,
-                                          op rsvp.reservation_update_type NOT NULL
+    id SERIAL NOT NULL,
+    reservation_id uuid NOT NULL,
+    op rsvp.reservation_update_type NOT NULL
 );
 
 -- trigger for add/update/delete a reservation
@@ -15,14 +16,14 @@ BEGIN
         -- if status changed, update reservation_changes
         IF OLD.status <> NEW.status THEN
             INSERT INTO rsvp.reservation_changes (reservation_id, op) VALUES (NEW.id, 'update');
-END IF;
+        END IF;
     ELSIF TG_OP = 'DELETE' THEN
         -- update reservation_changes
         INSERT INTO rsvp.reservation_changes (reservation_id, op) VALUES (OLD.id, 'delete');
-END IF;
+    END IF;
     -- notify a channel called reservation_update
     NOTIFY reservation_update;
-RETURN NULL;
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
