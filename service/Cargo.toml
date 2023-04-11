@@ -9,9 +9,14 @@ edition = "2021"
 abi = { version = "0.1.0", path = "../abi" }
 anyhow = "1.0.70"
 futures = "0.3.28"
+lazy_static = "1.4.0"
 reservation = { version = "0.1.0", path = "../reservation" }
 serde = { version = "1.0.160", features = ["derive"] }
 serde_yaml = "0.9.21"
 shellexpand = "3.1.0"
 tokio = { version = "1.27.0", features = ["full"] }
 tonic = { version = "0.9.1", features = ["gzip"] }
+
+[dev-dependencies]
+rand = "0.8.5"
+sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "uuid"] }

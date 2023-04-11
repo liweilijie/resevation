@@ -60,6 +60,16 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
+    async fn delete(&self, id: ReservationId) -> Result<(), abi::Error> {
+        // delete the reservation by id
+        id.validate()?;
+        sqlx::query("DELETE FROM rsvp.reservations WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     async fn get(&self, id: ReservationId) -> Result<abi::Reservation, abi::Error> {
         // get the reservation by id
         id.validate()?;
@@ -70,16 +80,6 @@ impl Rsvp for ReservationManager {
                 .await?;
 
         Ok(rsvp)
-    }
-
-    async fn delete(&self, id: ReservationId) -> Result<(), abi::Error> {
-        // delete the reservation by id
-        id.validate()?;
-        sqlx::query("DELETE FROM rsvp.reservations WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
     }
 
     async fn query(
