@@ -9,7 +9,10 @@ fn main() {
         .protoc_arg("--experimental_allow_proto3_optional")
         .out_dir("src/pb")
         .with_sql_type(&["reservation.ReservationStatus"])
-        .with_builder(&["reservation.ReservationQuery"])
+        .with_builder(&[
+            "reservation.ReservationQuery",
+            "reservation.ReservationFilter",
+        ])
         .with_builder_into(
             "reservation.ReservationQuery",
             &[
@@ -17,6 +20,17 @@ fn main() {
                 "user_id",
                 "status",
                 "page",
+                "page_size",
+                "desc",
+            ],
+        )
+        .with_builder_into(
+            "reservation.ReservationFilter",
+            &[
+                "resource_id",
+                "user_id",
+                "status",
+                "cursor",
                 "page_size",
                 "desc",
             ],
