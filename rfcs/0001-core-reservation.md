@@ -213,6 +213,10 @@ N/A
 
 ## Prior art
 
+gRpc stream work architecture:
+
+![gRpc stream](images/rpc_stream.png)
+
 N/A
 
 ## Unresolved questions

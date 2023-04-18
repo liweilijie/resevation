@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 abi = { version = "0.1.0", path = "../abi" }
 anyhow = "1.0.70"
-futures = "0.3.28"
+futures = {version = "0.3.28", default-features = false }
 lazy_static = "1.4.0"
 reservation = { version = "0.1.0", path = "../reservation" }
 serde = { version = "1.0.160", features = ["derive"] }
