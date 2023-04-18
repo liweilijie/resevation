@@ -143,41 +143,8 @@ impl<T> Stream for TonicReceiverStream<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::TestConfig;
     use abi::Reservation;
-    use lazy_static::lazy_static;
-    use sqlx_mock_db_tester::TestPg;
-    use std::ops::Deref;
-    use std::path::Path;
-    use tokio::runtime::Runtime;
-
-    lazy_static! {
-        static ref TEST_RT: Runtime = Runtime::new().unwrap();
-    }
-
-    struct TestConfig {
-        #[allow(dead_code)]
-        tdb: TestPg,
-        pub config: Config,
-    }
-
-    impl Deref for TestConfig {
-        type Target = Config;
-
-        fn deref(&self) -> &Self::Target {
-            &self.config
-        }
-    }
-
-    impl TestConfig {
-        pub fn new() -> Self {
-            let mut config = Config::load("fixtures/config.yml").unwrap();
-            println!("{}", config.db.server_url());
-            let tdb = TestPg::new(config.db.server_url(), Path::new("../migrations"));
-            config.db.dbname = tdb.dbname.clone();
-
-            Self { tdb, config }
-        }
-    }
 
     #[tokio::test]
     async fn rpc_reserve_should_work() {

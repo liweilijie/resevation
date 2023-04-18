@@ -1,10 +1,14 @@
 use crate::{ReservationManager, Rsvp};
-use abi::{DbConfig, FilterPager, ReservationId, Validator};
+use abi::{
+    convert_to_utc_time, DbConfig, FilterPager, Normalizer, ReservationId, ToSql, Validator,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use futures::stream::StreamExt;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::{postgres::types::PgRange, Either, PgPool, Row};
+use futures::StreamExt;
+use sqlx::{
+    postgres::{types::PgRange, PgPoolOptions},
+    Either, PgPool, Row,
+};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
@@ -63,17 +67,6 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
-    async fn delete(&self, id: ReservationId) -> Result<abi::Reservation, abi::Error> {
-        // delete the reservation by id
-        id.validate()?;
-        let rsvp: abi::Reservation =
-            sqlx::query_as("DELETE FROM rsvp.reservations WHERE id = $1 RETURNING *")
-                .bind(id)
-                .fetch_one(&self.pool)
-                .await?;
-        Ok(rsvp)
-    }
-
     async fn get(&self, id: ReservationId) -> Result<abi::Reservation, abi::Error> {
         // get the reservation by id
         id.validate()?;
@@ -86,13 +79,25 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
+    async fn delete(&self, id: ReservationId) -> Result<abi::Reservation, abi::Error> {
+        // delete the reservation by id
+        id.validate()?;
+        let rsvp: abi::Reservation =
+            sqlx::query_as("DELETE FROM rsvp.reservations WHERE id = $1 RETURNING *")
+                .bind(id)
+                .fetch_one(&self.pool)
+                .await?;
+        Ok(rsvp)
+    }
+
     async fn query(
         &self,
         query: abi::ReservationQuery,
     ) -> mpsc::Receiver<Result<abi::Reservation, abi::Error>> {
         let user_id = string_to_option(&query.user_id);
         let resource_id = string_to_option(&query.resource_id);
-        let range: PgRange<DateTime<Utc>> = query.get_timespan();
+        let start = query.start.map(convert_to_utc_time);
+        let end = query.end.map(convert_to_utc_time);
         let status = abi::ReservationStatus::from_i32(query.status)
             .unwrap_or(abi::ReservationStatus::Pending);
 
@@ -101,15 +106,14 @@ impl Rsvp for ReservationManager {
 
         tokio::spawn(async move {
             let mut rsvps = sqlx::query_as(
-                "SELECT * FROM rsvp.query($1, $2, $3, $4::rsvp.reservation_status, $5, $6, $7)",
+                "SELECT * FROM rsvp.query($1, $2, $3, $4, $5::rsvp.reservation_status, $6)",
             )
             .bind(user_id)
             .bind(resource_id)
-            .bind(range)
+            .bind(start)
+            .bind(end)
             .bind(status.to_string())
-            .bind(query.page)
             .bind(query.desc)
-            .bind(query.page_size)
             .fetch_many(&pool);
             while let Some(ret) = rsvps.next().await {
                 match ret {
@@ -138,56 +142,17 @@ impl Rsvp for ReservationManager {
 
     async fn filter(
         &self,
-        filter: abi::ReservationFilter,
+        mut filter: abi::ReservationFilter,
     ) -> Result<(FilterPager, Vec<abi::Reservation>), abi::Error> {
-        // filter reservations by user_id, resource_id, status, and order by id
-        let user_id = str_to_option(&filter.user_id);
-        let resource_id = str_to_option(&filter.resource_id);
-        let status = abi::ReservationStatus::from_i32(filter.status)
-            .unwrap_or(abi::ReservationStatus::Pending);
+        filter.normalize()?;
 
-        let page_size = if filter.page_size < 10 || filter.page_size > 100 {
-            10
-        } else {
-            filter.page_size
-        };
-        let rsvps: Vec<abi::Reservation> = sqlx::query_as(
-            "SELECT * FROM rsvp.filter($1, $2, $3::rsvp.reservation_status, $4, $5, $6)",
-        )
-        .bind(user_id)
-        .bind(resource_id)
-        .bind(status.to_string())
-        .bind(filter.cursor)
-        .bind(filter.desc)
-        .bind(page_size)
-        .fetch_all(&self.pool)
-        .await?;
+        let sql = filter.to_sql()?;
 
-        // if the first id is current cursor, then we have prev, we start from 1
-        // if len - start > page_size, then we have next, we end at len - 1
-        let has_prev = !rsvps.is_empty() && rsvps[0].id == filter.cursor;
-        let start = if has_prev { 1 } else { 0 };
+        let rsvps: Vec<abi::Reservation> = sqlx::query_as(&sql).fetch_all(&self.pool).await?;
+        let mut rsvps = rsvps.into_iter().collect();
 
-        let has_next = (rsvps.len() - start) as i32 > page_size;
-        let end = if has_next {
-            rsvps.len() - 1
-        } else {
-            rsvps.len()
-        };
-
-        let prev = if has_prev { rsvps[start - 1].id } else { -1 };
-        let next = if has_next { rsvps[end - 1].id } else { -1 };
-
-        // TODO: optimize this clone
-        let result = rsvps[start..end].to_vec();
-
-        let pager = FilterPager {
-            next,
-            prev,
-            // TODO: how to get total efficiently?
-            total: 0,
-        };
-        Ok((pager, result))
+        let pager = filter.get_pager(&mut rsvps)?;
+        Ok((pager, rsvps.into_iter().collect()))
     }
 }
 
@@ -203,14 +168,6 @@ impl ReservationManager {
             .connect(&url)
             .await?;
         Ok(Self::new(pool))
-    }
-}
-
-fn str_to_option(s: &str) -> Option<&str> {
-    if s.is_empty() {
-        None
-    } else {
-        Some(s)
     }
 }
 
@@ -364,8 +321,8 @@ mod tests {
             .unwrap();
 
         let (pager, rsvps) = manager.filter(filter).await.unwrap();
-        assert_eq!(pager.prev, -1);
-        assert_eq!(pager.next, -1);
+        assert_eq!(pager.prev, None);
+        assert_eq!(pager.next, None);
         assert_eq!(rsvps.len(), 1);
         assert_eq!(rsvps[0], rsvp);
     }

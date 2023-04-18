@@ -116,22 +116,14 @@ pub struct ReservationQuery {
     pub status: i32,
     /// start time for the reservation query, if 0, use Infinity for start time
     #[prost(message, optional, tag = "4")]
-    #[builder(setter(into, strip_option))]
+    #[builder(setter(into, strip_option), default)]
     pub start: ::core::option::Option<::prost_types::Timestamp>,
     /// end time for the reservation query, if 0, use Infinity for end time
     #[prost(message, optional, tag = "5")]
-    #[builder(setter(into, strip_option))]
+    #[builder(setter(into, strip_option), default)]
     pub end: ::core::option::Option<::prost_types::Timestamp>,
-    /// current page for the query
-    #[prost(int32, tag = "6")]
-    #[builder(setter(into), default)]
-    pub page: i32,
-    /// page size for the query
-    #[prost(int32, tag = "7")]
-    #[builder(setter(into), default)]
-    pub page_size: i32,
     /// sort direction
-    #[prost(bool, tag = "8")]
+    #[prost(bool, tag = "6")]
     #[builder(setter(into), default)]
     pub desc: bool,
 }
@@ -144,6 +136,7 @@ pub struct QueryRequest {
 }
 /// query reservations, order by reservation id
 #[derive(derive_builder::Builder)]
+#[builder(build_fn(name = "private_build"))]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReservationFilter {
@@ -159,13 +152,13 @@ pub struct ReservationFilter {
     #[prost(enumeration = "ReservationStatus", tag = "3")]
     #[builder(setter(into), default)]
     pub status: i32,
-    #[prost(int64, tag = "4")]
-    #[builder(setter(into), default)]
-    pub cursor: i64,
+    #[prost(int64, optional, tag = "4")]
+    #[builder(setter(into, strip_option), default)]
+    pub cursor: ::core::option::Option<i64>,
     /// page size for the query
-    #[prost(int32, tag = "5")]
-    #[builder(setter(into), default)]
-    pub page_size: i32,
+    #[prost(int64, tag = "5")]
+    #[builder(setter(into), default = "10")]
+    pub page_size: i64,
     /// sort direction
     #[prost(bool, tag = "6")]
     #[builder(setter(into), default)]
@@ -182,12 +175,12 @@ pub struct FilterRequest {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FilterPager {
-    #[prost(int64, tag = "1")]
-    pub prev: i64,
-    #[prost(int64, tag = "2")]
-    pub next: i64,
-    #[prost(int32, tag = "3")]
-    pub total: i32,
+    #[prost(int64, optional, tag = "1")]
+    pub prev: ::core::option::Option<i64>,
+    #[prost(int64, optional, tag = "2")]
+    pub next: ::core::option::Option<i64>,
+    #[prost(int64, optional, tag = "3")]
+    pub total: ::core::option::Option<i64>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -294,7 +287,7 @@ pub mod reservation_service_client {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
         where
-            D: TryInto<tonic::transport::Endpoint>,
+            D: std::convert::TryInto<tonic::transport::Endpoint>,
             D::Error: Into<StdError>,
         {
             let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
@@ -349,27 +342,11 @@ pub mod reservation_service_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
-        /// Limits the maximum size of a decoded message.
-        ///
-        /// Default: `4MB`
-        #[must_use]
-        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
-            self.inner = self.inner.max_decoding_message_size(limit);
-            self
-        }
-        /// Limits the maximum size of an encoded message.
-        ///
-        /// Default: `usize::MAX`
-        #[must_use]
-        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
-            self.inner = self.inner.max_encoding_message_size(limit);
-            self
-        }
         /// make a reservation
         pub async fn reserve(
             &mut self,
             request: impl tonic::IntoRequest<super::ReserveRequest>,
-        ) -> std::result::Result<tonic::Response<super::ReserveResponse>, tonic::Status> {
+        ) -> Result<tonic::Response<super::ReserveResponse>, tonic::Status> {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -379,16 +356,13 @@ pub mod reservation_service_client {
             let codec = tonic::codec::ProstCodec::default();
             let path =
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/reserve");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "reserve"));
-            self.inner.unary(req, path, codec).await
+            self.inner.unary(request.into_request(), path, codec).await
         }
         /// confirm a pending reservation, if reservation is not pending, do nothing
         pub async fn confirm(
             &mut self,
             request: impl tonic::IntoRequest<super::ConfirmRequest>,
-        ) -> std::result::Result<tonic::Response<super::ConfirmResponse>, tonic::Status> {
+        ) -> Result<tonic::Response<super::ConfirmResponse>, tonic::Status> {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -398,16 +372,13 @@ pub mod reservation_service_client {
             let codec = tonic::codec::ProstCodec::default();
             let path =
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/confirm");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "confirm"));
-            self.inner.unary(req, path, codec).await
+            self.inner.unary(request.into_request(), path, codec).await
         }
         /// update the reservation note
         pub async fn update(
             &mut self,
             request: impl tonic::IntoRequest<super::UpdateRequest>,
-        ) -> std::result::Result<tonic::Response<super::UpdateResponse>, tonic::Status> {
+        ) -> Result<tonic::Response<super::UpdateResponse>, tonic::Status> {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -417,16 +388,13 @@ pub mod reservation_service_client {
             let codec = tonic::codec::ProstCodec::default();
             let path =
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/update");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "update"));
-            self.inner.unary(req, path, codec).await
+            self.inner.unary(request.into_request(), path, codec).await
         }
         /// cancel a reservation
         pub async fn cancel(
             &mut self,
             request: impl tonic::IntoRequest<super::CancelRequest>,
-        ) -> std::result::Result<tonic::Response<super::CancelResponse>, tonic::Status> {
+        ) -> Result<tonic::Response<super::CancelResponse>, tonic::Status> {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -436,16 +404,13 @@ pub mod reservation_service_client {
             let codec = tonic::codec::ProstCodec::default();
             let path =
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/cancel");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "cancel"));
-            self.inner.unary(req, path, codec).await
+            self.inner.unary(request.into_request(), path, codec).await
         }
         /// get a reservation by id
         pub async fn get(
             &mut self,
             request: impl tonic::IntoRequest<super::GetRequest>,
-        ) -> std::result::Result<tonic::Response<super::GetResponse>, tonic::Status> {
+        ) -> Result<tonic::Response<super::GetResponse>, tonic::Status> {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -454,19 +419,14 @@ pub mod reservation_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static("/reservation.ReservationService/get");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "get"));
-            self.inner.unary(req, path, codec).await
+            self.inner.unary(request.into_request(), path, codec).await
         }
         /// query reservations by resource id, user id, status, start time, end time
         pub async fn query(
             &mut self,
             request: impl tonic::IntoRequest<super::QueryRequest>,
-        ) -> std::result::Result<
-            tonic::Response<tonic::codec::Streaming<super::Reservation>>,
-            tonic::Status,
-        > {
+        ) -> Result<tonic::Response<tonic::codec::Streaming<super::Reservation>>, tonic::Status>
+        {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -476,16 +436,15 @@ pub mod reservation_service_client {
             let codec = tonic::codec::ProstCodec::default();
             let path =
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/query");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "query"));
-            self.inner.server_streaming(req, path, codec).await
+            self.inner
+                .server_streaming(request.into_request(), path, codec)
+                .await
         }
         /// filter reservations, order by reservation id
         pub async fn filter(
             &mut self,
             request: impl tonic::IntoRequest<super::FilterRequest>,
-        ) -> std::result::Result<tonic::Response<super::FilterResponse>, tonic::Status> {
+        ) -> Result<tonic::Response<super::FilterResponse>, tonic::Status> {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -495,19 +454,14 @@ pub mod reservation_service_client {
             let codec = tonic::codec::ProstCodec::default();
             let path =
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/filter");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "filter"));
-            self.inner.unary(req, path, codec).await
+            self.inner.unary(request.into_request(), path, codec).await
         }
         /// another system could monitor newly added/confirmed/cancelled reservations
         pub async fn listen(
             &mut self,
             request: impl tonic::IntoRequest<super::ListenRequest>,
-        ) -> std::result::Result<
-            tonic::Response<tonic::codec::Streaming<super::Reservation>>,
-            tonic::Status,
-        > {
+        ) -> Result<tonic::Response<tonic::codec::Streaming<super::Reservation>>, tonic::Status>
+        {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -517,10 +471,9 @@ pub mod reservation_service_client {
             let codec = tonic::codec::ProstCodec::default();
             let path =
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/listen");
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("reservation.ReservationService", "listen"));
-            self.inner.server_streaming(req, path, codec).await
+            self.inner
+                .server_streaming(request.into_request(), path, codec)
+                .await
         }
     }
 }
@@ -535,50 +488,50 @@ pub mod reservation_service_server {
         async fn reserve(
             &self,
             request: tonic::Request<super::ReserveRequest>,
-        ) -> std::result::Result<tonic::Response<super::ReserveResponse>, tonic::Status>;
+        ) -> Result<tonic::Response<super::ReserveResponse>, tonic::Status>;
         /// confirm a pending reservation, if reservation is not pending, do nothing
         async fn confirm(
             &self,
             request: tonic::Request<super::ConfirmRequest>,
-        ) -> std::result::Result<tonic::Response<super::ConfirmResponse>, tonic::Status>;
+        ) -> Result<tonic::Response<super::ConfirmResponse>, tonic::Status>;
         /// update the reservation note
         async fn update(
             &self,
             request: tonic::Request<super::UpdateRequest>,
-        ) -> std::result::Result<tonic::Response<super::UpdateResponse>, tonic::Status>;
+        ) -> Result<tonic::Response<super::UpdateResponse>, tonic::Status>;
         /// cancel a reservation
         async fn cancel(
             &self,
             request: tonic::Request<super::CancelRequest>,
-        ) -> std::result::Result<tonic::Response<super::CancelResponse>, tonic::Status>;
+        ) -> Result<tonic::Response<super::CancelResponse>, tonic::Status>;
         /// get a reservation by id
         async fn get(
             &self,
             request: tonic::Request<super::GetRequest>,
-        ) -> std::result::Result<tonic::Response<super::GetResponse>, tonic::Status>;
+        ) -> Result<tonic::Response<super::GetResponse>, tonic::Status>;
         /// Server streaming response type for the query method.
-        type queryStream: futures_core::Stream<Item = std::result::Result<super::Reservation, tonic::Status>>
+        type queryStream: futures_core::Stream<Item = Result<super::Reservation, tonic::Status>>
             + Send
             + 'static;
         /// query reservations by resource id, user id, status, start time, end time
         async fn query(
             &self,
             request: tonic::Request<super::QueryRequest>,
-        ) -> std::result::Result<tonic::Response<Self::queryStream>, tonic::Status>;
+        ) -> Result<tonic::Response<Self::queryStream>, tonic::Status>;
         /// filter reservations, order by reservation id
         async fn filter(
             &self,
             request: tonic::Request<super::FilterRequest>,
-        ) -> std::result::Result<tonic::Response<super::FilterResponse>, tonic::Status>;
+        ) -> Result<tonic::Response<super::FilterResponse>, tonic::Status>;
         /// Server streaming response type for the listen method.
-        type listenStream: futures_core::Stream<Item = std::result::Result<super::Reservation, tonic::Status>>
+        type listenStream: futures_core::Stream<Item = Result<super::Reservation, tonic::Status>>
             + Send
             + 'static;
         /// another system could monitor newly added/confirmed/cancelled reservations
         async fn listen(
             &self,
             request: tonic::Request<super::ListenRequest>,
-        ) -> std::result::Result<tonic::Response<Self::listenStream>, tonic::Status>;
+        ) -> Result<tonic::Response<Self::listenStream>, tonic::Status>;
     }
     /// Reservation service
     #[derive(Debug)]
@@ -586,8 +539,6 @@ pub mod reservation_service_server {
         inner: _Inner<T>,
         accept_compression_encodings: EnabledCompressionEncodings,
         send_compression_encodings: EnabledCompressionEncodings,
-        max_decoding_message_size: Option<usize>,
-        max_encoding_message_size: Option<usize>,
     }
     struct _Inner<T>(Arc<T>);
     impl<T: ReservationService> ReservationServiceServer<T> {
@@ -600,8 +551,6 @@ pub mod reservation_service_server {
                 inner,
                 accept_compression_encodings: Default::default(),
                 send_compression_encodings: Default::default(),
-                max_decoding_message_size: None,
-                max_encoding_message_size: None,
             }
         }
         pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
@@ -622,22 +571,6 @@ pub mod reservation_service_server {
             self.send_compression_encodings.enable(encoding);
             self
         }
-        /// Limits the maximum size of a decoded message.
-        ///
-        /// Default: `4MB`
-        #[must_use]
-        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
-            self.max_decoding_message_size = Some(limit);
-            self
-        }
-        /// Limits the maximum size of an encoded message.
-        ///
-        /// Default: `usize::MAX`
-        #[must_use]
-        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
-            self.max_encoding_message_size = Some(limit);
-            self
-        }
     }
     impl<T, B> tonic::codegen::Service<http::Request<B>> for ReservationServiceServer<T>
     where
@@ -648,10 +581,7 @@ pub mod reservation_service_server {
         type Response = http::Response<tonic::body::BoxBody>;
         type Error = std::convert::Infallible;
         type Future = BoxFuture<Self::Response, Self::Error>;
-        fn poll_ready(
-            &mut self,
-            _cx: &mut Context<'_>,
-        ) -> Poll<std::result::Result<(), Self::Error>> {
+        fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
@@ -667,29 +597,22 @@ pub mod reservation_service_server {
                             &mut self,
                             request: tonic::Request<super::ReserveRequest>,
                         ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
+                            let inner = self.0.clone();
                             let fut = async move { (*inner).reserve(request).await };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
                         let method = reserveSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -705,29 +628,22 @@ pub mod reservation_service_server {
                             &mut self,
                             request: tonic::Request<super::ConfirmRequest>,
                         ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
+                            let inner = self.0.clone();
                             let fut = async move { (*inner).confirm(request).await };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
                         let method = confirmSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -743,29 +659,22 @@ pub mod reservation_service_server {
                             &mut self,
                             request: tonic::Request<super::UpdateRequest>,
                         ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
+                            let inner = self.0.clone();
                             let fut = async move { (*inner).update(request).await };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
                         let method = updateSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -781,29 +690,22 @@ pub mod reservation_service_server {
                             &mut self,
                             request: tonic::Request<super::CancelRequest>,
                         ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
+                            let inner = self.0.clone();
                             let fut = async move { (*inner).cancel(request).await };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
                         let method = cancelSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -819,29 +721,22 @@ pub mod reservation_service_server {
                             &mut self,
                             request: tonic::Request<super::GetRequest>,
                         ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
+                            let inner = self.0.clone();
                             let fut = async move { (*inner).get(request).await };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
                         let method = getSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -861,29 +756,22 @@ pub mod reservation_service_server {
                             &mut self,
                             request: tonic::Request<super::QueryRequest>,
                         ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
+                            let inner = self.0.clone();
                             let fut = async move { (*inner).query(request).await };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
                         let method = querySvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
@@ -899,29 +787,22 @@ pub mod reservation_service_server {
                             &mut self,
                             request: tonic::Request<super::FilterRequest>,
                         ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
+                            let inner = self.0.clone();
                             let fut = async move { (*inner).filter(request).await };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
                         let method = filterSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
@@ -942,29 +823,22 @@ pub mod reservation_service_server {
                             &mut self,
                             request: tonic::Request<super::ListenRequest>,
                         ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
+                            let inner = self.0.clone();
                             let fut = async move { (*inner).listen(request).await };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
                         let method = listenSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
                         let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
@@ -988,14 +862,12 @@ pub mod reservation_service_server {
                 inner,
                 accept_compression_encodings: self.accept_compression_encodings,
                 send_compression_encodings: self.send_compression_encodings,
-                max_decoding_message_size: self.max_decoding_message_size,
-                max_encoding_message_size: self.max_encoding_message_size,
             }
         }
     }
     impl<T: ReservationService> Clone for _Inner<T> {
         fn clone(&self) -> Self {
-            Self(Arc::clone(&self.0))
+            Self(self.0.clone())
         }
     }
     impl<T: std::fmt::Debug> std::fmt::Debug for _Inner<T> {

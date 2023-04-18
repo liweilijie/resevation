@@ -1,11 +1,15 @@
-use abi::Reservation;
+mod service;
+#[cfg(test)]
+pub mod test_utils;
+
+use abi::reservation_service_server::ReservationServiceServer;
+use abi::{Config, Reservation};
 use futures::Stream;
 use reservation::ReservationManager;
 use std::pin::Pin;
 use tokio::sync::mpsc;
+use tonic::transport::Server;
 use tonic::Status;
-
-mod service;
 
 pub struct RsvpService {
     manager: ReservationManager,
@@ -16,3 +20,14 @@ pub struct TonicReceiverStream<T> {
 }
 
 type ReservationStream = Pin<Box<dyn Stream<Item = Result<Reservation, Status>> + Send>>;
+
+pub async fn start_server(config: &Config) -> Result<(), anyhow::Error> {
+    let addr = format!("{}:{}", config.server.host, config.server.port).parse()?;
+
+    let svc = RsvpService::from_config(config).await?;
+    let svc = ReservationServiceServer::new(svc);
+
+    println!("Listening on {}", addr);
+    Server::builder().add_service(svc).serve(addr).await?;
+    Ok(())
+}

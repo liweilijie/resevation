@@ -1,12 +1,14 @@
+mod request;
+mod reservation;
+mod reservation_filter;
+mod reservation_query;
+mod reservation_status;
+
 use crate::{convert_to_utc_time, Error};
 use chrono::{DateTime, Utc};
 use prost_types::Timestamp;
 use sqlx::postgres::types::PgRange;
 use std::ops::Bound;
-
-mod reservation;
-mod reservation_query;
-mod reservation_status;
 
 pub fn validate_range(start: Option<&Timestamp>, end: Option<&Timestamp>) -> Result<(), Error> {
     if start.is_none() || end.is_none() {
