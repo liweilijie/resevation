@@ -20,3 +20,4 @@ tonic = { version = "0.9.1", features = ["gzip"] }
 [dev-dependencies]
 rand = "0.8.5"
 sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "uuid"] }
+sqlx-mock-db-tester = "0.2.0"
