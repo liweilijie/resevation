@@ -1,4 +1,5 @@
-use crate::{ReservationStream, RsvpService, TonicReceiverStream};
+use std::{pin::Pin, task::Poll};
+
 use abi::{
     reservation_service_server::ReservationService, CancelRequest, CancelResponse, Config,
     ConfirmRequest, ConfirmResponse, FilterRequest, FilterResponse, GetRequest, GetResponse,
@@ -6,10 +7,10 @@ use abi::{
 };
 use futures::Stream;
 use reservation::{ReservationManager, Rsvp};
-use std::pin::Pin;
-use std::task::{Context, Poll};
 use tokio::sync::mpsc;
 use tonic::{async_trait, Request, Response, Status};
+
+use crate::{ReservationStream, RsvpService, TonicReceiverStream};
 
 impl RsvpService {
     pub async fn from_config(config: &Config) -> Result<Self, anyhow::Error> {
@@ -47,6 +48,7 @@ impl ReservationService for RsvpService {
             reservation: Some(reservation),
         }))
     }
+
     /// update the reservation note
     async fn update(
         &self,
@@ -58,6 +60,7 @@ impl ReservationService for RsvpService {
             reservation: Some(reservation),
         }))
     }
+
     /// cancel a reservation
     async fn cancel(
         &self,
@@ -69,6 +72,7 @@ impl ReservationService for RsvpService {
             reservation: Some(reservation),
         }))
     }
+
     /// get a reservation by id
     async fn get(&self, request: Request<GetRequest>) -> Result<Response<GetResponse>, Status> {
         let request = request.into_inner();
@@ -77,6 +81,7 @@ impl ReservationService for RsvpService {
             reservation: Some(reservation),
         }))
     }
+
     ///Server streaming response type for the query method.
     type queryStream = ReservationStream;
     /// query reservations by resource id, user id, status, start time, end time
@@ -88,11 +93,11 @@ impl ReservationService for RsvpService {
         if request.query.is_none() {
             return Err(Status::invalid_argument("missing query params"));
         }
-
         let rsvps = self.manager.query(request.query.unwrap()).await;
         let stream = TonicReceiverStream::new(rsvps);
         Ok(Response::new(Box::pin(stream)))
     }
+
     /// filter reservations, order by reservation id
     async fn filter(
         &self,
@@ -103,13 +108,13 @@ impl ReservationService for RsvpService {
         if request.filter.is_none() {
             return Err(Status::invalid_argument("missing filter params"));
         }
-
         let (pager, reservations) = self.manager.filter(request.filter.unwrap()).await?;
         Ok(Response::new(FilterResponse {
             pager: Some(pager),
             reservations,
         }))
     }
+
     ///Server streaming response type for the listen method.
     type listenStream = ReservationStream;
     /// another system could monitor newly added/confirmed/cancelled reservations
@@ -130,7 +135,10 @@ impl<T> TonicReceiverStream<T> {
 impl<T> Stream for TonicReceiverStream<T> {
     type Item = Result<T, Status>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
         match self.inner.poll_recv(cx) {
             Poll::Ready(Some(Ok(item))) => Poll::Ready(Some(Ok(item))),
             Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(e.into()))),
@@ -148,7 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn rpc_reserve_should_work() {
-        let config = TestConfig::new();
+        let config = TestConfig::default();
 
         let service = RsvpService::from_config(&config).await.unwrap();
         let reservation = Reservation::new_pending(

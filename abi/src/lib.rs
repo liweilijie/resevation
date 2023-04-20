@@ -4,6 +4,7 @@ mod pager;
 mod pb;
 mod types;
 mod utils;
+
 pub use config::*;
 pub use error::{Error, ReservationConflict, ReservationConflictInfo, ReservationWindow};
 pub use pb::*;
@@ -32,7 +33,7 @@ pub trait Normalizer: Validator {
 }
 
 pub trait ToSql {
-    fn to_sql(&self) -> Result<String, Error>;
+    fn to_sql(&self) -> String;
 }
 
 /// database equivalent of the "reservation_status" enum

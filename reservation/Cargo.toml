@@ -17,4 +17,5 @@ futures = {version = "0.3.28", default-features = false }
 tracing = "0.1.37"
 
 [dev-dependencies]
-sqlx-database-tester = { version = "0.4.2", features = ["runtime-tokio"] }
+prost-types = "0.11.9"
+sqlx-mock-db-tester = "0.2.0"

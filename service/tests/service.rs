@@ -152,10 +152,20 @@ async fn grpc_filter_should_work() {
 async fn get_test_client(tconfig: &TestConfig) -> ReservationServiceClient<Channel> {
     let config = &tconfig.config;
     setup_server(config).await;
+    let fut = async move {
+        // if error on conn keep retry until timeout
+        while ReservationServiceClient::connect(config.server.url(false))
+            .await
+            .is_err()
+        {
+            time::sleep(Duration::from_millis(10)).await;
+        }
+        ReservationServiceClient::connect(config.server.url(false))
+            .await
+            .unwrap()
+    };
 
-    ReservationServiceClient::connect(config.server.url(false))
-        .await
-        .unwrap()
+    time::timeout(Duration::from_secs(5), fut).await.unwrap()
 }
 
 async fn setup_server(config: &Config) {
@@ -163,7 +173,7 @@ async fn setup_server(config: &Config) {
     tokio::spawn(async move {
         start_server(&config_cloned).await.unwrap();
     });
-    time::sleep(Duration::from_millis(500)).await;
+    time::sleep(Duration::from_millis(10)).await;
 }
 
 async fn make_reservations(client: &mut ReservationServiceClient<Channel>, count: u32) {
