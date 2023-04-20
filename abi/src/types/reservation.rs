@@ -1,10 +1,14 @@
-use crate::types::{get_timespan, validate_range};
-use crate::{convert_to_timestamp, Error, Reservation, ReservationStatus, RsvpStatus, Validator};
+use crate::{
+    convert_to_timestamp, pager::Id, Error, Reservation, ReservationStatus, RsvpStatus, Validator,
+};
 use chrono::{DateTime, FixedOffset, Utc};
-use sqlx::postgres::types::PgRange;
-use sqlx::postgres::PgRow;
-use sqlx::{FromRow, Row};
+use sqlx::{
+    postgres::{types::PgRange, PgRow},
+    FromRow, Row,
+};
 use std::ops::Bound;
+
+use super::{get_timespan, validate_range};
 
 impl Reservation {
     pub fn new_pending(
@@ -17,16 +21,22 @@ impl Reservation {
         Self {
             id: 0,
             user_id: uid.into(),
-            status: ReservationStatus::Pending as i32,
             resource_id: rid.into(),
             start: Some(convert_to_timestamp(start.with_timezone(&Utc))),
             end: Some(convert_to_timestamp(end.with_timezone(&Utc))),
             note: note.into(),
+            status: ReservationStatus::Pending as i32,
         }
     }
 
     pub fn get_timespan(&self) -> PgRange<DateTime<Utc>> {
         get_timespan(self.start.as_ref(), self.end.as_ref())
+    }
+}
+
+impl Id for Reservation {
+    fn id(&self) -> i64 {
+        self.id
     }
 }
 

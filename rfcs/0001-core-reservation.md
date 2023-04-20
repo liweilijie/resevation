@@ -217,7 +217,9 @@ gRpc stream work architecture:
 
 ![gRpc stream](images/rpc_stream.png)
 
-N/A
+postgres filter pagination:
+
+![pagination](images/pagination.png)
 
 ## Unresolved questions
 
